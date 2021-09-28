@@ -1,6 +1,9 @@
 import datetime
-
 import backtrader as bt
+import pandas as pd
+import backtrader.analyzers as btanalyzers
+
+import strategy as yt_strategy
 
 
 class TestStrategy(bt.Strategy):
@@ -12,8 +15,21 @@ class TestStrategy(bt.Strategy):
     def __init__(self):
         # Keep a reference to the "close" line in the data[0] dataseries
         self.dataclose = self.datas[0].close
+        self.datavolume = self.datas[0].volume
+        self.datahigh = self.datas[0].high
+        self.datalow = self.datas[0].low
 
-    # def next(self):
+    def next(self):
+        close_last_100 = self.dataclose.get(size=100)
+        volume_last_100 = self.datavolume.get(size=100)
+        high_last_100 = self.datahigh.get(size=100)
+        low_last_100 = self.datalow.get(size=100)
+        if len(close_last_100) and len(volume_last_100) > 0:
+            fund_index_hist_sina_df = pd.DataFrame(
+                {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
+            strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
+            percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
+            print(percent)
     # Simply log the closing price of the series from the reference
     # self.log('Close, %.2f' % self.dataclose[0])
     # 数据切片
@@ -26,6 +42,18 @@ class TestStrategy(bt.Strategy):
 
 
 class Strategy_percent(bt.Strategy):
+    def __init__(self):
+        # Keep a reference to the "close" line in the data[0] dataseries
+        self.dataclose = self.datas[0].close
+        self.datavolume = self.datas[0].volume
+        self.datahigh = self.datas[0].high
+        self.datalow = self.datas[0].low
+
+    def log(self, txt, dt=None, doprint=False):
+        '''log记录'''
+        dt = dt or self.datas[0].datetime.date(0)
+        print('%s, %s' % (dt.isoformat(), txt))
+
     def notify_order(self, order):
         if order.status == order.Completed:
             pass
@@ -37,51 +65,47 @@ class Strategy_percent(bt.Strategy):
         self.order = None  # sentinel to avoid operrations on pending order
 
     def next(self):
-        dt = self.data.datetime.date()
 
-        portfolio_value = self.broker.get_value()
-        print('%04d - %s - Position Size:     %02d - Value %.2f' %
-              (len(self), dt.isoformat(), self.position.size, portfolio_value))
 
-        data_value = self.broker.get_value([self.data])
-
-        # if self.p.use_target_value:
-        #     print('%04d - %s - data value %.2f' %
-        #           (len(self), dt.isoformat(), data_value))
-        #
-        # elif self.p.use_target_percent:
-        #     port_perc = data_value / portfolio_value
-        #     print('%04d - %s - data percent %.2f' %
-        #           (len(self), dt.isoformat(), port_perc))
-        print('data_value', data_value)
         if self.order:
             return  # pending order execution
 
-        size = dt.day
-        if (dt.month % 2) == 0:
-            size = 31 - size
+        close_last_100 = self.dataclose.get(size=100)
+        volume_last_100 = self.datavolume.get(size=100)
+        high_last_100 = self.datahigh.get(size=100)
+        low_last_100 = self.datalow.get(size=100)
+        if len(close_last_100) and len(volume_last_100) > 0:
+            fund_index_hist_sina_df = pd.DataFrame(
+                {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
+            strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
+            percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
+            self.order = self.order_target_percent(target=percent)
 
-        percent = size / 100.0
+    def stop(self):
+        data_value = self.broker.get_value([self.data])
+        dt = self.data.datetime.date()
+        portfolio_value = self.broker.get_value()
+        print('%04d - %s - Position Size:     %02d - Value %.2f' %
+              (len(self), dt.isoformat(), self.position.size, portfolio_value))
+        print('data_value', data_value)
+        # self.log("最大回撤:-%.2f%%" % self.stats.drawdown.maxdrawdown[-1], doprint=True)
 
-        print('%04d - %s - Order Target Percent: %.2f' %
-              (len(self), dt.isoformat(), percent))
 
-        self.order = self.order_target_percent(target=percent)
 
 
 def runstart():
     # Create a cerebro entity
-    cerebro = bt.Cerebro(stdstats=False)
+    cerebro = bt.Cerebro()
 
     # Add a strategy
     # cerebro.addstrategy(TestStrategy)
     cerebro.addstrategy(Strategy_percent)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("20100101", "%Y%m%d")
-    dt_end = datetime.datetime.strptime("20210923", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20200101", "%Y%m%d")
+    dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./000300.csv',
+        dataname=r'./399808.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -91,7 +115,7 @@ def runstart():
         low=4,
         open=1,
         close=2,
-        volume=5,
+        volume=6,
         openinterest=-1
     )
 
@@ -101,10 +125,21 @@ def runstart():
     cerebro.broker.setcommission(commission=0.0003)
     # 滑点
     cerebro.broker.set_slippage_fixed(0.01)
+    cerebro.addobserver(bt.observers.DrawDown)
     # Run over everything
-    cerebro.run()
+    # cerebro.run()
     # Plot the result
     # cerebro.plot(style='bar')
+    cerebro.addanalyzer(btanalyzers.AnnualReturn, _name="AR")
+    cerebro.addanalyzer(btanalyzers.DrawDown, _name="DD")
+    cerebro.addanalyzer(btanalyzers.Returns, _name="RE")
+    results = cerebro.run()
+    thestrat = results[0]
+    #
+    print("年化收益率:", thestrat.analyzers.AR.get_analysis())
+    print("最大回撤:%.2f，最大回撤周期%d" % (
+        thestrat.analyzers.DD.get_analysis().max.drawdown, thestrat.analyzers.DD.get_analysis().max.len))
+    print("总收益率:%.2f" % (thestrat.analyzers.RE.get_analysis()["rtot"]))
 
 
 if __name__ == '__main__':
