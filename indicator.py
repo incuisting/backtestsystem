@@ -66,3 +66,8 @@ def TII(ohlcv: pd.DataFrame, n1=40, n2=9):
     tii = tii_line(ohlcv, n1=n1)
     tii_signal = calc_tii_signal(ohlcv, n1=n1, n2=n2)
     return [tii, tii_signal]
+
+def ma(ohlcv:pd.DataFrame,n=20):
+    close = ohlcv['close'].tolist()
+    close_ma = talib.MA(numpy.array(close), timeperiod=n)
+    return close_ma[-1]

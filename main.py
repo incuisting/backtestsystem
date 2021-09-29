@@ -66,7 +66,6 @@ class Strategy_percent(bt.Strategy):
 
     def next(self):
 
-
         if self.order:
             return  # pending order execution
 
@@ -91,8 +90,6 @@ class Strategy_percent(bt.Strategy):
         # self.log("最大回撤:-%.2f%%" % self.stats.drawdown.maxdrawdown[-1], doprint=True)
 
 
-
-
 def runstart():
     # Create a cerebro entity
     cerebro = bt.Cerebro()
@@ -101,11 +98,11 @@ def runstart():
     # cerebro.addstrategy(TestStrategy)
     cerebro.addstrategy(Strategy_percent)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("20200101", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20100101", "%Y%m%d")
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./399808.csv',
+        dataname=r'./399006.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -133,6 +130,8 @@ def runstart():
     cerebro.addanalyzer(btanalyzers.AnnualReturn, _name="AR")
     cerebro.addanalyzer(btanalyzers.DrawDown, _name="DD")
     cerebro.addanalyzer(btanalyzers.Returns, _name="RE")
+    cerebro.addanalyzer(btanalyzers.TradeAnalyzer, _name="TA")
+    cerebro.addanalyzer(btanalyzers.SQN, _name="SQN")
     results = cerebro.run()
     thestrat = results[0]
     #
@@ -140,6 +139,17 @@ def runstart():
     print("最大回撤:%.2f，最大回撤周期%d" % (
         thestrat.analyzers.DD.get_analysis().max.drawdown, thestrat.analyzers.DD.get_analysis().max.len))
     print("总收益率:%.2f" % (thestrat.analyzers.RE.get_analysis()["rtot"]))
+    trade_info = results[0].analyzers.TA.get_analysis()
+    total_trade_num = trade_info["total"]["total"]
+    win_num = trade_info["won"]["total"]
+    lost_num = trade_info["lost"]["total"]
+    pnl_won = trade_info['won']['pnl']['total']
+    pnl_lost = trade_info['lost']['pnl']['total']
+    print('交易次数:', total_trade_num)
+    print('胜率:', win_num / total_trade_num,'败率:', lost_num / total_trade_num,'盈亏比:', pnl_won / - pnl_lost)
+    print('SQN:',thestrat.analyzers.SQN.get_analysis().sqn)
+    # print('败率:', lost_num / total_trade_num)
+    # print('盈亏比:', pnl_won / - pnl_lost)
 
 
 if __name__ == '__main__':
