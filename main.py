@@ -1,4 +1,6 @@
 import datetime
+import math
+
 import backtrader as bt
 import pandas as pd
 import backtrader.analyzers as btanalyzers
@@ -69,10 +71,10 @@ class Strategy_percent(bt.Strategy):
         if self.order:
             return  # pending order execution
 
-        close_last_100 = self.dataclose.get(size=100)
-        volume_last_100 = self.datavolume.get(size=100)
-        high_last_100 = self.datahigh.get(size=100)
-        low_last_100 = self.datalow.get(size=100)
+        close_last_100 = self.dataclose.get(size=120)
+        volume_last_100 = self.datavolume.get(size=120)
+        high_last_100 = self.datahigh.get(size=120)
+        low_last_100 = self.datalow.get(size=120)
         if len(close_last_100) and len(volume_last_100) > 0:
             fund_index_hist_sina_df = pd.DataFrame(
                 {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
@@ -90,6 +92,25 @@ class Strategy_percent(bt.Strategy):
         # self.log("最大回撤:-%.2f%%" % self.stats.drawdown.maxdrawdown[-1], doprint=True)
 
 
+class Benchmark(bt.Strategy):
+    def __init__(self):
+        self.order = None
+        self.bBuy = False
+        self.dataclose = self.datas[0].close
+
+    def next(self):
+        if self.bBuy == True:
+            return
+        else:
+            cash = self.broker.get_cash()
+            stock = math.ceil(cash / self.dataclose / 100) * 100 - 100
+            self.order = self.buy(size=stock, price=self.datas[0].close)
+            self.bBuy = True
+
+    def stop(self):
+        self.order = self.close()
+
+
 def runstart():
     # Create a cerebro entity
     cerebro = bt.Cerebro()
@@ -97,12 +118,13 @@ def runstart():
     # Add a strategy
     # cerebro.addstrategy(TestStrategy)
     cerebro.addstrategy(Strategy_percent)
+    # cerebro.addstrategy(Benchmark)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("2011101", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20110101", "%Y%m%d")
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./399808.csv',
+        dataname=r'./399006.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
