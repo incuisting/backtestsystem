@@ -90,7 +90,7 @@ class Strategy_percent(bt.Strategy):
         portfolio_value = self.broker.get_value()
         # print('%04d - %s - Position Size:     %02d - Value %.2f' %
         #       (len(self), dt.isoformat(), self.position.size, portfolio_value))
-        # print('data_value', data_value)
+        print('data_value', portfolio_value)
         # self.log("最大回撤:-%.2f%%" % self.stats.drawdown.maxdrawdown[-1], doprint=True)
 
 
@@ -101,15 +101,16 @@ class Benchmark(bt.Strategy):
         self.dataclose = self.datas[0].close
 
     def next(self):
-        if self.bBuy == True:
-            return
-        else:
-            cash = self.broker.get_cash()
-            stock = math.ceil(cash / self.dataclose / 100) * 100 - 100
-            self.order = self.buy(size=stock, price=self.datas[0].close)
-            self.bBuy = True
+        # if self.bBuy == True:
+        #     return
+        # else:
+        #     cash = self.broker.get_cash()
+        self.order = self.order_target_percent(target=1)
+            # self.bBuy = True
 
     def stop(self):
+        portfolio_value = self.broker.get_value()
+        print('data_value', portfolio_value)
         self.order = self.close()
 
 
@@ -122,11 +123,11 @@ def runstart():
     cerebro.addstrategy(Strategy_percent)
     # cerebro.addstrategy(Benchmark)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("20110101", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20140101", "%Y%m%d")
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/930608.csv',
+        dataname=r'./index_history_data/399006.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -233,23 +234,23 @@ def loop_index_history(index):
 #     return [d for d in res if d is not None]
 
 
-if __name__ == '__main__':
-    dir_path = r'./index_history_data/'
-    filenames = next(walk(dir_path), (None, None, []))[2]
-    # res = handle_multi(filenames)
-    # print(res)
-    yearly = None
-    for index, file in enumerate(filenames):
-        print(file)
-        index_yearly = loop_index_history(file)
-        index_yearly_pd = pd.DataFrame(dict(index_yearly), index=[0])
-        if yearly is None:
-            yearly = index_yearly_pd
-        else:
-            yearly.append(index_yearly_pd, ignore_index=True)
-        print(str(index + 1) + '/' + str(len(filenames)))
-    for year in yearly.columns:
-        year_mean = yearly[year].mean()
-        print(year, year_mean)
 # if __name__ == '__main__':
-#     runstart()
+#     dir_path = r'./index_history_data/'
+#     filenames = next(walk(dir_path), (None, None, []))[2]
+#     # res = handle_multi(filenames)
+#     # print(res)
+#     yearly = None
+#     for index, file in enumerate(filenames):
+#         print(file)
+#         index_yearly = loop_index_history(file)
+#         index_yearly_pd = pd.DataFrame(dict(index_yearly), index=[0])
+#         if yearly is None:
+#             yearly = index_yearly_pd
+#         else:
+#             yearly.append(index_yearly_pd, ignore_index=True)
+#         print(str(index + 1) + '/' + str(len(filenames)))
+#     for year in yearly.columns:
+#         year_mean = yearly[year].mean()
+#         print(year, year_mean)
+if __name__ == '__main__':
+    runstart()
