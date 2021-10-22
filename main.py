@@ -126,7 +126,7 @@ def runstart():
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/930608.csv',
+        dataname=r'./index_history_data/000932.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -233,23 +233,23 @@ def loop_index_history(index):
 #     return [d for d in res if d is not None]
 
 
-if __name__ == '__main__':
-    dir_path = r'./index_history_data/'
-    filenames = next(walk(dir_path), (None, None, []))[2]
-    # res = handle_multi(filenames)
-    # print(res)
-    yearly = None
-    for index, file in enumerate(filenames):
-        print(file)
-        index_yearly = loop_index_history(file)
-        index_yearly_pd = pd.DataFrame(dict(index_yearly), index=[0])
-        if yearly is None:
-            yearly = index_yearly_pd
-        else:
-            yearly.append(index_yearly_pd, ignore_index=True)
-        print(str(index + 1) + '/' + str(len(filenames)))
-    for year in yearly.columns:
-        year_mean = yearly[year].mean()
-        print(year, year_mean)
 # if __name__ == '__main__':
-#     runstart()
+#     dir_path = r'./index_history_data/'
+#     filenames = next(walk(dir_path), (None, None, []))[2]
+#     # res = handle_multi(filenames)
+#     # print(res)
+#     yearly = None
+#     for index, file in enumerate(filenames):
+#         print(file)
+#         index_yearly = loop_index_history(file)
+#         index_yearly_pd = pd.DataFrame(dict(index_yearly), index=[0])
+#         if yearly is None:
+#             yearly = index_yearly_pd
+#         else:
+#             yearly.append(index_yearly_pd, ignore_index=True)
+#         print(str(index + 1) + '/' + str(len(filenames)))
+#     for year in yearly.columns:
+#         year_mean = yearly[year].mean()
+#         print(year, year_mean)
+if __name__ == '__main__':
+    runstart()

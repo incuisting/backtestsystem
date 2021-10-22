@@ -67,7 +67,52 @@ def TII(ohlcv: pd.DataFrame, n1=40, n2=9):
     tii_signal = calc_tii_signal(ohlcv, n1=n1, n2=n2)
     return [tii, tii_signal]
 
-def ma(ohlcv:pd.DataFrame,n=20):
+
+def ma(ohlcv: pd.DataFrame, n=20):
     close = ohlcv['close'].tolist()
     close_ma = talib.MA(numpy.array(close), timeperiod=n)
     return close_ma[-1]
+
+
+def po(ohlcv: pd.DataFrame, short_n=9, long_n=26):
+    close = ohlcv['close'].tolist()
+    ema_short = talib.EMA(numpy.array(close), timeperiod=short_n)
+    ema_long = talib.EMA(numpy.array(close), timeperiod=long_n)
+    PO = (ema_short - ema_long) / ema_long * 100
+    return PO
+
+
+def pos(ohlcv: pd.DataFrame, n=100):
+    close = ohlcv['close'].tolist()
+    if len(close) < 2 * n:
+        return 0
+    n_day_price_list = []
+    for day in range(1, n):
+        ref_close_n = close[-(n + day)]
+        price = (close[-(day + 1)] - ref_close_n) / ref_close_n
+        n_day_price_list.append(price)
+    np_price = numpy.array(n_day_price_list)
+    ref_close_n = close[-(n + 1)]
+    current_price = (close[-1] - ref_close_n) / ref_close_n
+    POS = (current_price - np_price.min()) / (np_price.max() - np_price.min())
+    return POS
+
+
+def adtm(ohlcv: pd.DataFrame, n=20):
+    open_arr = ohlcv['open'].tolist()
+    high_arr = ohlcv['high'].tolist()
+    low_arr = ohlcv['low'].tolist()
+    if len(low_arr) < n:
+        return 0
+
+    for day in range(1,n):
+    ref_open = open_arr[-2]
+    open = open_arr[-1]
+    high = high_arr[-1]
+    low = low_arr[-1]
+    dtm = max(high - open, open - ref_open) if open > ref_open else 0
+    dbm = max(open - low, ref_open - open) if open < ref_open else 0
+    stm = sum(dtm, n)
+    sbm = sum(dbm, n)
+    ADTM = (stm - sbm) / max(stm, sbm)
+    return ADTM
