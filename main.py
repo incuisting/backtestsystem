@@ -69,15 +69,15 @@ class Strategy_percent(bt.Strategy):
         self.order = None  # sentinel to avoid operrations on pending order
 
     def next(self):
-
+        # print(self.dataclose.array[:self.dataclose.lencount])
         if self.order:
             return  # pending order execution
 
-        close_last_100 = self.dataclose.get(size=100)
-        volume_last_100 = self.datavolume.get(size=100)
-        high_last_100 = self.datahigh.get(size=100)
-        low_last_100 = self.datalow.get(size=100)
-        if len(close_last_100) and len(volume_last_100) > 60:
+        close_last_100 = self.dataclose.array[:self.dataclose.lencount + 1]
+        volume_last_100 = self.datavolume.array[:self.dataclose.lencount + 1]
+        high_last_100 = self.datahigh.array[:self.dataclose.lencount + 1]
+        low_last_100 = self.datalow.array[:self.dataclose.lencount + 1]
+        if len(close_last_100) > 50:
             fund_index_hist_sina_df = pd.DataFrame(
                 {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
             strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
@@ -106,7 +106,7 @@ class Benchmark(bt.Strategy):
         # else:
         #     cash = self.broker.get_cash()
         self.order = self.order_target_percent(target=1)
-            # self.bBuy = True
+        # self.bBuy = True
 
     def stop(self):
         portfolio_value = self.broker.get_value()
@@ -123,11 +123,11 @@ def runstart():
     cerebro.addstrategy(Strategy_percent)
     # cerebro.addstrategy(Benchmark)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("20140101", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20170101", "%Y%m%d")
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/399006.csv',
+        dataname=r'./index_history_data/930625.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -144,9 +144,10 @@ def runstart():
     cerebro.adddata(data)
     cerebro.broker.setcash(100000.0)
     # 手续费
-    cerebro.broker.setcommission(commission=0.0003)
+    cerebro.broker.setcommission(commission=0.0015)
     # 滑点
-    cerebro.broker.set_slippage_fixed(0.01)
+    cerebro.broker.set_slippage_perc(perc=0.01)
+    cerebro.broker.set_coc(True)
     cerebro.addobserver(bt.observers.DrawDown)
     # Run over everything
     # cerebro.run()
@@ -161,26 +162,25 @@ def runstart():
     results = cerebro.run()
     thestrat = results[0]
     #
-    nhsy = thestrat.analyzers.AR.get_analysis()
-    print(type(nhsy))
     print("年化收益率:", thestrat.analyzers.AR.get_analysis())
     print("夏普:", thestrat.analyzers.SR.get_analysis()['sharperatio'])
     print("最大回撤:%.2f，最大回撤周期%d" % (
         thestrat.analyzers.DD.get_analysis().max.drawdown, thestrat.analyzers.DD.get_analysis().max.len))
     print("总收益率:%.2f" % (thestrat.analyzers.RE.get_analysis()["rtot"]))
-    trade_info = results[0].analyzers.TA.get_analysis()
-    total_trade_num = trade_info["total"]["total"]
-    win_num = trade_info["won"]["total"]
-    lost_num = trade_info["lost"]["total"]
-    pnl_won = trade_info['won']['pnl']['total']
-    pnl_lost = trade_info['lost']['pnl']['total']
-    print('交易次数:', total_trade_num)
-    print('胜率:', win_num / total_trade_num, '败率:', lost_num / total_trade_num)
-    print('盈亏比:', (pnl_won / win_num) / ((- pnl_lost) / lost_num))
+    # trade_info = results[0].analyzers.TA.get_analysis()
+    # total_trade_num = trade_info["total"]["total"]
+    # win_num = trade_info["won"]["total"]
+    # lost_num = trade_info["lost"]["total"]
+    # pnl_won = trade_info['won']['pnl']['total']
+    # pnl_lost = trade_info['lost']['pnl']['total']
+    # print('交易次数:', total_trade_num)
+    # print('胜率:', win_num / total_trade_num, '败率:', lost_num / total_trade_num)
+    # print('盈亏比:', (pnl_won / win_num) / ((- pnl_lost) / lost_num))
     # print('SQN:', thestrat.analyzers.SQN.get_analysis().sqn)
     # print('败率:', lost_num / total_trade_num)
     # print('盈亏比:', pnl_won / - pnl_lost)
     #
+    cerebro.plot()
 
 
 def loop_index_history(index):

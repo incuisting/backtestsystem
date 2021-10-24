@@ -16,8 +16,8 @@ def MAAMT(ohlcv: pd.DataFrame, n=40):
 def DPO(close_data: pd.DataFrame, n=20):
     before_day = int(n / 2 + 1)
     close_data = close_data['close'].tolist()
-    ref_data = talib.SMA(numpy.array(close_data[:-before_day]), timeperiod=n)  #
-    dpo = close_data[-1] - ref_data[-1]
+    ma_data = talib.SMA(numpy.array(close_data), timeperiod=n)  #
+    dpo = close_data[-1] - ma_data[-before_day]
     return dpo
 
 
@@ -67,7 +67,8 @@ def TII(ohlcv: pd.DataFrame, n1=40, n2=9):
     tii_signal = calc_tii_signal(ohlcv, n1=n1, n2=n2)
     return [tii, tii_signal]
 
-def ma(ohlcv:pd.DataFrame,n=20):
+
+def ma(ohlcv: pd.DataFrame, n=20):
     close = ohlcv['close'].tolist()
     close_ma = talib.MA(numpy.array(close), timeperiod=n)
     return close_ma[-1]
