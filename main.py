@@ -60,11 +60,34 @@ class Strategy_percent(bt.Strategy):
         print('%s, %s' % (dt.isoformat(), txt))
 
     def notify_order(self, order):
-        if order.status == order.Completed:
-            pass
+        if order.status in [order.Submitted, order.Accepted]:
+            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
+            return
 
-        if not order.alive():
-            self.order = None  # indicate no order is pending
+            # Check if an order has been completed
+            # Attention: broker could reject order if not enough cash
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log(
+                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                    (order.executed.price,
+                     order.executed.value,
+                     order.executed.comm))
+
+                self.buyprice = order.executed.price
+                self.buycomm = order.executed.comm
+            else:  # Sell
+                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                         (order.executed.price,
+                          order.executed.value,
+                          order.executed.comm))
+
+            self.bar_executed = len(self)
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log('Order Canceled/Margin/Rejected')
+
+        self.order = None
 
     def start(self):
         self.order = None  # sentinel to avoid operrations on pending order
@@ -74,18 +97,19 @@ class Strategy_percent(bt.Strategy):
         if self.order:
             return  # pending order execution
 
-        close_last_100 = self.dataclose.array[:self.dataclose.lencount + 1]
-        volume_last_100 = self.datavolume.array[:self.dataclose.lencount + 1]
-        high_last_100 = self.datahigh.array[:self.dataclose.lencount + 1]
-        low_last_100 = self.datalow.array[:self.dataclose.lencount + 1]
-        open_last_100 = self.datalow.array[:self.dataopen.lencount + 1]
-        if len(close_last_100) > 50:
+        close_last_100 = self.dataclose.array[:self.dataclose.lencount]
+        volume_last_100 = self.datavolume.array[:self.dataclose.lencount]
+        high_last_100 = self.datahigh.array[:self.dataclose.lencount]
+        low_last_100 = self.datalow.array[:self.dataclose.lencount]
+        open_last_100 = self.datalow.array[:self.dataopen.lencount]
+        if len(close_last_100) > 49:
             fund_index_hist_sina_df = pd.DataFrame(
                 {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100,
                  "open": open_last_100})
             strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
             percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
             self.order = self.order_target_percent(target=percent)
+            self.log('percent: %.2f' % (percent))
 
     def stop(self):
         data_value = self.broker.get_value([self.data])
@@ -108,7 +132,7 @@ class Benchmark(bt.Strategy):
         #     return
         # else:
         #     cash = self.broker.get_cash()
-        self.order = self.order_target_percent(target=1)
+        self.order = self.order_target_percent(target=0.99)
         # self.bBuy = True
 
     def stop(self):
@@ -126,11 +150,11 @@ def runstart():
     cerebro.addstrategy(Strategy_percent)
     # cerebro.addstrategy(Benchmark)
     # Get a pandas dataframe
-    dt_start = datetime.datetime.strptime("20170101", "%Y%m%d")
+    dt_start = datetime.datetime.strptime("20110101", "%Y%m%d")
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/000932.csv',
+        dataname=r'./index_history_data/931079.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -147,10 +171,9 @@ def runstart():
     cerebro.adddata(data)
     cerebro.broker.setcash(100000.0)
     # 手续费
-    cerebro.broker.setcommission(commission=0.0015)
+    cerebro.broker.setcommission(commission=0.00015)
     # 滑点
-    cerebro.broker.set_slippage_perc(perc=0.01)
-    cerebro.broker.set_coc(True)
+    cerebro.broker.set_slippage_perc(perc=0)
     cerebro.addobserver(bt.observers.DrawDown)
     # Run over everything
     # cerebro.run()
@@ -183,7 +206,7 @@ def runstart():
     # print('败率:', lost_num / total_trade_num)
     # print('盈亏比:', pnl_won / - pnl_lost)
     #
-    cerebro.plot()
+    # cerebro.plot()
 
 
 def loop_index_history(index):
