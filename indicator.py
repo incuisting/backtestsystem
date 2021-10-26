@@ -78,7 +78,7 @@ def po(ohlcv: pd.DataFrame, short_n=9, long_n=26):
     close = ohlcv['close'].tolist()
     ema_short = talib.EMA(numpy.array(close), timeperiod=short_n)
     ema_long = talib.EMA(numpy.array(close), timeperiod=long_n)
-    PO = (ema_short - ema_long) / ema_long * 100
+    PO = (ema_short[-1] - ema_long[-1]) / ema_long[-1] * 100
     return PO
 
 
@@ -88,31 +88,34 @@ def pos(ohlcv: pd.DataFrame, n=100):
         return 0
     n_day_price_list = []
     for day in range(1, n):
-        ref_close_n = close[-(n + day)]
-        price = (close[-(day + 1)] - ref_close_n) / ref_close_n
+        ref_close_n = close[-(n + day + 1)]
+        price = (close[-day] - ref_close_n) / ref_close_n
         n_day_price_list.append(price)
     np_price = numpy.array(n_day_price_list)
     ref_close_n = close[-(n + 1)]
     current_price = (close[-1] - ref_close_n) / ref_close_n
     POS = (current_price - np_price.min()) / (np_price.max() - np_price.min())
-    return POS
+    return POS * 100
 
 
 def adtm(ohlcv: pd.DataFrame, n=20):
     open_arr = ohlcv['open'].tolist()
     high_arr = ohlcv['high'].tolist()
     low_arr = ohlcv['low'].tolist()
-    if len(low_arr) < n:
+    if len(low_arr) < n + 1:
         return 0
-
-    for day in range(1,n):
-    ref_open = open_arr[-2]
-    open = open_arr[-1]
-    high = high_arr[-1]
-    low = low_arr[-1]
-    dtm = max(high - open, open - ref_open) if open > ref_open else 0
-    dbm = max(open - low, ref_open - open) if open < ref_open else 0
-    stm = sum(dtm, n)
-    sbm = sum(dbm, n)
+    dtm_list = []
+    dbm_list = []
+    for day in range(1, n + 1):
+        ref_open = open_arr[-day - 1]
+        open = open_arr[-day]
+        high = high_arr[-day]
+        low = low_arr[-day]
+        dtm = max(high - open, open - ref_open) if open > ref_open else 0
+        dbm = max(open - low, ref_open - open) if open < ref_open else 0
+        dtm_list.append(dtm)
+        dbm_list.append(dbm)
+    stm = sum(dtm_list)
+    sbm = sum(dbm_list)
     ADTM = (stm - sbm) / max(stm, sbm)
     return ADTM

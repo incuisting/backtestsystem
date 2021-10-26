@@ -52,6 +52,7 @@ class Strategy_percent(bt.Strategy):
         self.datavolume = self.datas[0].volume
         self.datahigh = self.datas[0].high
         self.datalow = self.datas[0].low
+        self.dataopen = self.datas[0].open
 
     def log(self, txt, dt=None, doprint=False):
         '''log记录'''
@@ -77,9 +78,11 @@ class Strategy_percent(bt.Strategy):
         volume_last_100 = self.datavolume.array[:self.dataclose.lencount + 1]
         high_last_100 = self.datahigh.array[:self.dataclose.lencount + 1]
         low_last_100 = self.datalow.array[:self.dataclose.lencount + 1]
+        open_last_100 = self.datalow.array[:self.dataopen.lencount + 1]
         if len(close_last_100) > 50:
             fund_index_hist_sina_df = pd.DataFrame(
-                {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
+                {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100,
+                 "open": open_last_100})
             strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
             percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
             self.order = self.order_target_percent(target=percent)
@@ -127,7 +130,7 @@ def runstart():
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/930625.csv',
+        dataname=r'./index_history_data/000932.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
@@ -167,15 +170,15 @@ def runstart():
     print("最大回撤:%.2f，最大回撤周期%d" % (
         thestrat.analyzers.DD.get_analysis().max.drawdown, thestrat.analyzers.DD.get_analysis().max.len))
     print("总收益率:%.2f" % (thestrat.analyzers.RE.get_analysis()["rtot"]))
-    # trade_info = results[0].analyzers.TA.get_analysis()
-    # total_trade_num = trade_info["total"]["total"]
-    # win_num = trade_info["won"]["total"]
-    # lost_num = trade_info["lost"]["total"]
-    # pnl_won = trade_info['won']['pnl']['total']
-    # pnl_lost = trade_info['lost']['pnl']['total']
-    # print('交易次数:', total_trade_num)
-    # print('胜率:', win_num / total_trade_num, '败率:', lost_num / total_trade_num)
-    # print('盈亏比:', (pnl_won / win_num) / ((- pnl_lost) / lost_num))
+    trade_info = results[0].analyzers.TA.get_analysis()
+    total_trade_num = trade_info["total"]["total"]
+    win_num = trade_info["won"]["total"]
+    lost_num = trade_info["lost"]["total"]
+    pnl_won = trade_info['won']['pnl']['total']
+    pnl_lost = trade_info['lost']['pnl']['total']
+    print('交易次数:', total_trade_num)
+    print('胜率:', win_num / total_trade_num, '败率:', lost_num / total_trade_num)
+    print('盈亏比:', (pnl_won / win_num) / ((- pnl_lost) / lost_num))
     # print('SQN:', thestrat.analyzers.SQN.get_analysis().sqn)
     # print('败率:', lost_num / total_trade_num)
     # print('盈亏比:', pnl_won / - pnl_lost)
