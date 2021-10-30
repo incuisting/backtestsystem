@@ -2,6 +2,10 @@ import numpy
 import pandas as pd
 import talib
 
+def MESA(ohlcv:pd.DataFrame,fast=0.5,slow=0.05):
+    close_data = ohlcv['close'].tolist()
+    mama, fama = talib.MAMA(numpy.array(close_data), fastlimit=fast, slowlimit=slow)
+    return [mama,fama]
 
 # volume < maamt sell
 # volume > maamt buy

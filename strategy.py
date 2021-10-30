@@ -94,16 +94,27 @@ def ma_cross_strategy(ohlcv: pd.DataFrame, n=5):
     return direct
 
 
+def mesa_strategy(etf_data: pd.DataFrame, fast=0.05, slow=0.5):
+    mama, fama = indicator.MESA(ohlcv=etf_data, fast=fast, slow=slow)
+    if mama[-1] > fama[-1]:
+        return 'buy'
+    else:
+        return 'sell'
+
+
 def strategy_combine(etf_data: pd.DataFrame):
-    tii = tii_strategy(etf_data)
+    # tii = tii_strategy(etf_data)
     # er = er_strategy(etf_data)
-    maamt = maamt_strategy(etf_data)
-    dpo = dpo_strategy(etf_data)
+    # maamt = maamt_strategy(etf_data)
+    # dpo = dpo_strategy(etf_data)
     # ma5ma20 = ma_strategy(etf_data, slow=20, fast=5)
-    ma5 = ma_cross_strategy(etf_data, n=5)
+    # ma5 = ma_cross_strategy(etf_data, n=5)
     # adtm = adtm_strategy(ohlcv=etf_data)
     # pos = pos_strategy(ohlcv=etf_data)
     # po = po_strategy(ohlcv=etf_data)
+
+
+    mesa = mesa_strategy(etf_data=etf_data)
     # return [tii, maamt, dpo]
     # 1.6
     # return [tii, er, maamt, dpo]  #胜率: 0.3739130434782609 败率: 0.6260869565217392 盈亏比: 2.2802850351731516
@@ -139,7 +150,7 @@ def strategy_combine(etf_data: pd.DataFrame):
     # return [ma]
     # return [ma5]
     # return [tii, dpo, ma20]
-    return [tii, dpo]
+    return [mesa]
 
 
 # 年化收益率: OrderedDict([(2011, 0.0), (2012, -0.059182187190000124), (2013, 0.21184097379568878), (2014, 0.1917914917428023), (2015, 0.8007249383493), (2016, -0.1507829522782037), (2017, -0.01127350180272646), (2018, -0.10268130902155193), (2019, 0.33992611896744496), (2020, 0.17938762923141116), (2021, 0.1827567250195965)])
