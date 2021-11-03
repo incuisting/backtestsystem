@@ -31,8 +31,10 @@ class TestStrategy(bt.Strategy):
         if len(close_last_100) and len(volume_last_100) > 0:
             fund_index_hist_sina_df = pd.DataFrame(
                 {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100})
-            strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
-            percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
+            strategy_new_result = yt_strategy.strategy_combine(
+                fund_index_hist_sina_df)
+            percent = ((strategy_new_result.count('buy')) /
+                       len(strategy_new_result))
             print(percent)
     # Simply log the closing price of the series from the reference
     # self.log('Close, %.2f' % self.dataclose[0])
@@ -106,10 +108,18 @@ class Strategy_percent(bt.Strategy):
             fund_index_hist_sina_df = pd.DataFrame(
                 {"close": close_last_100, 'amount': volume_last_100, "high": high_last_100, "low": low_last_100,
                  "open": open_last_100})
-            strategy_new_result = yt_strategy.strategy_combine(fund_index_hist_sina_df)
-            percent = ((strategy_new_result.count('buy')) / len(strategy_new_result))
-            self.order = self.order_target_percent(target=percent)
-            self.log('percent: %.2f' % (percent))
+            prev_fund_index_hist_sina_df = fund_index_hist_sina_df[:-1]
+            strategy_prev_result = yt_strategy.strategy_combine(
+                prev_fund_index_hist_sina_df)
+            strategy_new_result = yt_strategy.strategy_combine(
+                fund_index_hist_sina_df)
+            prev_percent = ((strategy_prev_result.count(
+                'buy')) / len(strategy_prev_result))
+            percent = ((strategy_new_result.count('buy')) /
+                       len(strategy_new_result))
+            if percent != prev_percent:
+                self.order = self.order_target_percent(target=percent-0.01)
+                self.log('percent: %.2f' % (percent))
 
     def stop(self):
         data_value = self.broker.get_value([self.data])
@@ -154,7 +164,7 @@ def runstart():
     dt_end = datetime.datetime.strptime("20210927", "%Y%m%d")
     # Pass it to the backtrader datafeed and add it to the cerebro
     data = bt.feeds.GenericCSVData(
-        dataname=r'./index_history_data/931079.csv',
+        dataname=r'./index_history_data/399006.csv',
         fromdate=dt_start,  # 起止日期
         todate=dt_end,
         nullvalue=0.0,
