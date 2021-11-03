@@ -216,3 +216,88 @@ data_value 147724.99977899977
 盈亏比: 2.020116174238302
 
 """
+"""
+//@version=4
+study("Trend Intensity Index With SignalLine", overlay=false)
+
+//Inputs
+SMALength = input(title = "SmaLength", type = input.integer, defval = 20)
+Src = input(title = "Src", type = input.source, defval = close)
+SignalType = input(title = "Signal Type?", defval = "JURIK", options = ["JURIK", "SMA", "EMA", "RMA", "VWMA"])
+Sma = sma(Src, SMALength)
+SignalLen = input(title = "SignalLen", defval = 20)
+phase = input(title="JurikPhase", type=input.integer, defval=0)
+power = input(title="JurikPower", type=input.integer, defval=2)
+
+//Mathsshiz... calculating the TII...
+Dev = Src - Sma
+
+
+PosDev = 0.00
+NegDev = 0.00
+
+
+if Dev > 0  
+    PosDev := Dev
+
+if Dev < 0
+    NegDev := abs(Dev) 
+
+m = 0
+
+m := (SMALength % 2 == 0) ? SMALength/2 : (SMALength + 1) / 2
+
+Sumpos = sum(PosDev, m)
+Negpos = sum(NegDev, m)
+
+//BOOOM!
+
+TrendIntensity = 100 * (Sumpos) / (Sumpos + Negpos)
+
+
+    
+
+//Signal Moving Averages
+
+SignalMa = 0.00
+
+if SignalType == "JURIK" // many thanks to the wonderful coder, Everget, for this
+    /// Copyright © 2018 Alex Orekhov (everget)
+    /// Copyright © 2017 Jurik Research and Consulting
+
+    phaseRatio = phase < -100 ? 0.5 : phase > 100 ? 2.5 : phase / 100 + 1.5
+    beta = 0.45 * (SignalLen - 1) / (0.45 * (SignalLen - 1) + 2)
+    alpha = pow(beta, power)
+    jma = 0.0
+    e0 = 0.0
+    e0 := (1 - alpha) * TrendIntensity + alpha * nz(e0[1])
+    e1 = 0.0
+    e1 := (TrendIntensity - e0) * (1 - beta) + beta * nz(e1[1])
+    e2 = 0.0
+    e2 := (e0 + phaseRatio * e1 - nz(jma[1])) * pow(1 - alpha, 2) + pow(alpha, 2) * nz(e2[1])
+    jma := e2 + nz(jma[1])
+    SignalMa := jma
+
+if SignalType == "EMA"
+    SignalMa := ema(TrendIntensity, SignalLen)
+
+if SignalType == "SMA"
+    SignalMa := sma(TrendIntensity, SignalLen)
+
+if SignalType == "RMA"
+    SignalMa := rma(TrendIntensity, SignalLen)
+
+if SignalType == "VWMA"
+    SignalMa := vwma(TrendIntensity, SignalLen)
+
+//Lovely job... now it'd be extra nice to have a Histogram plotting the difference between the SignalLine and the TII. When this is flat, market is potentially ranging.
+
+
+Dist = TrendIntensity - SignalMa
+Distance = abs(Dist)
+
+plot(Distance, style = plot.style_columns, color = TrendIntensity >= SignalMa and TrendIntensity > 2? color.green : TrendIntensity <= SignalMa and TrendIntensity < 98 ? color.red : color.green, transp = 0)
+plot(TrendIntensity, style = plot.style_line, linewidth = 3, color = color.aqua)
+plot(SignalMa, style = plot.style_line, linewidth = 2, color = color.maroon)
+
+"""

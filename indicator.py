@@ -33,7 +33,7 @@ def ER(ohlcv: pd.DataFrame, n=20):
 
 
 def tii_line(etf_data: pd.DataFrame, n1=40):
-    m = int((n1 / 2) + 1)
+    m = int(n1 / 2) if n1 % 2 == 0 else int((n1 / 2) + 1)
     dev_pos_m_day = []
     dev_neg_m_day = []
     close = etf_data['close'].tolist()
@@ -52,19 +52,20 @@ def tii_line(etf_data: pd.DataFrame, n1=40):
     return tii
 
 
-def calc_tii_signal(etf_data: pd.DataFrame, n1=40, n2=9):
+def calc_tii_signal(etf_data: pd.DataFrame, n1=40, n2=9, signal_type: str = 'EMA'):
     tii_array = []
     for index in range(0, n2):
         data = etf_data[:-index] if index != 0 else etf_data
         tii_value = tii_line(data, n1)
         tii_array.append(tii_value)
-    tii_signal = talib.EMA(numpy.array(tii_array), n2)
+    signal_func = getattr(talib, signal_type)
+    tii_signal = signal_func(numpy.array(tii_array), n2)
     return tii_signal[-1]
 
 
-def TII(ohlcv: pd.DataFrame, n1=40, n2=9):
+def TII(ohlcv: pd.DataFrame, n1=40, n2=9, signal_type: str = 'EMA'):
     tii = tii_line(ohlcv, n1=n1)
-    tii_signal = calc_tii_signal(ohlcv, n1=n1, n2=n2)
+    tii_signal = calc_tii_signal(ohlcv, n1=n1, n2=n2, signal_type=signal_type)
     return [tii, tii_signal]
 
 
@@ -119,3 +120,11 @@ def adtm(ohlcv: pd.DataFrame, n=20):
     sbm = sum(dbm_list)
     ADTM = (stm - sbm) / max(stm, sbm)
     return ADTM
+
+
+def test_indicator():
+    data = pd.read_csv('./index_history_data/399987.csv')
+    TII(ohlcv=data, signal_type='EMA')
+
+
+# test_indicator()
