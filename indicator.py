@@ -122,9 +122,18 @@ def adtm(ohlcv: pd.DataFrame, n=20):
     return ADTM
 
 
+def macd(ohlcv: pd.DataFrame, fastperiod=12, slowperiod=26, signalperiod=9):
+    close = ohlcv['close'].tolist()
+    macd, macdsignal, macdhist = talib.MACD(numpy.array(close), fastperiod=12, slowperiod=26, signalperiod=9)
+    # print(macd[-1], macdsignal[-1], macdhist[-1])
+    return macdhist[-1]
+
+
 def test_indicator():
-    data = pd.read_csv('./index_history_data/399987.csv')
-    TII(ohlcv=data, signal_type='EMA')
+    data = pd.read_csv('./index_history_data/000932.csv')
+    tii, tii_signal = TII(ohlcv=data)
+    print(tii, tii_signal)
+    # macdhist = macd(ohlcv=data)
+    # print(macdhist)
 
-
-# test_indicator()
+test_indicator()

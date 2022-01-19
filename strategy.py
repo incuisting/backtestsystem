@@ -94,11 +94,18 @@ def ma_cross_strategy(ohlcv: pd.DataFrame, n=5):
     return direct
 
 
+def macd_strategy(ohlcv: pd.DataFrame):
+    macdhist = indicator.macd(ohlcv=ohlcv)
+    direct = 'buy' if macdhist > 0 else 'sell'
+    return direct
+
+
 def strategy_combine(etf_data: pd.DataFrame):
     tii = tii_strategy(etf_data)
-    er = er_strategy(etf_data)
-    # maamt = maamt_strategy(etf_data)
-    # dpo = dpo_strategy(etf_data)
+    # er = er_strategy(etf_data)
+    # macd = macd_strategy(etf_data)
+    maamt = maamt_strategy(etf_data)
+    dpo = dpo_strategy(etf_data)
     # ma5ma20 = ma_strategy(etf_data, slow=20, fast=5)
     # ma5 = ma_cross_strategy(etf_data, n=5)
     # adtm = adtm_strategy(ohlcv=etf_data)
@@ -127,7 +134,7 @@ def strategy_combine(etf_data: pd.DataFrame):
     # 1.56
     # return [dpo, maamt] # 胜率: 0.391304347826087 败率: 0.6086956521739131 盈亏比: 2.1270387285995613
     # 1.26
-    return [tii, er] # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 1.909201015635396
+    # return [tii, er] # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 1.909201015635396
     # 1.75
     # return [dpo, tii]  # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 2.2012029435186897
     # 1.8319
@@ -139,7 +146,8 @@ def strategy_combine(etf_data: pd.DataFrame):
     # return [ma]
     # return [ma5]
     # return [tii, dpo, ma20]
-    # return [tii, dpo]
+    return [tii, dpo]
+    # return [tii, dpo, macd]
 
 
 # 年化收益率: OrderedDict([(2011, 0.0), (2012, -0.059182187190000124), (2013, 0.21184097379568878), (2014, 0.1917914917428023), (2015, 0.8007249383493), (2016, -0.1507829522782037), (2017, -0.01127350180272646), (2018, -0.10268130902155193), (2019, 0.33992611896744496), (2020, 0.17938762923141116), (2021, 0.1827567250195965)])
@@ -300,4 +308,23 @@ plot(Distance, style = plot.style_columns, color = TrendIntensity >= SignalMa an
 plot(TrendIntensity, style = plot.style_line, linewidth = 3, color = color.aqua)
 plot(SignalMa, style = plot.style_line, linewidth = 2, color = color.maroon)
 
+"""
+
+"""
+dpo macd tii
+夏普: 0.6595065130398121
+最大回撤:24.37，最大回撤周期214
+总收益率:0.74
+交易次数: 49
+胜率: 0.3877551020408163 败率: 0.5918367346938775
+盈亏比: 2.901783274178244
+
+
+tii dpo
+夏普: 0.6188676736173646
+最大回撤:29.24，最大回撤周期287
+总收益率:0.57
+交易次数: 46
+胜率: 0.43478260869565216 败率: 0.5434782608695652
+盈亏比: 2.112487994259678
 """
