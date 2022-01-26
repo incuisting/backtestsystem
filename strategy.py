@@ -94,19 +94,18 @@ def ma_cross_strategy(ohlcv: pd.DataFrame, n=5):
     return direct
 
 
-def mesa_strategy(etf_data: pd.DataFrame, fast=0.05, slow=0.5):
-    mama, fama = indicator.MESA(ohlcv=etf_data, fast=fast, slow=slow)
-    if mama[-1] > fama[-1]:
-        return 'buy'
-    else:
-        return 'sell'
+def macd_strategy(ohlcv: pd.DataFrame):
+    macdhist = indicator.macd(ohlcv=ohlcv)
+    direct = 'buy' if macdhist > 0 else 'sell'
+    return direct
 
 
 def strategy_combine(etf_data: pd.DataFrame):
     # tii = tii_strategy(etf_data)
     # er = er_strategy(etf_data)
-    # maamt = maamt_strategy(etf_data)
-    # dpo = dpo_strategy(etf_data)
+    # macd = macd_strategy(etf_data)
+    maamt = maamt_strategy(etf_data)
+    dpo = dpo_strategy(etf_data)
     # ma5ma20 = ma_strategy(etf_data, slow=20, fast=5)
     # ma5 = ma_cross_strategy(etf_data, n=5)
     # adtm = adtm_strategy(ohlcv=etf_data)
@@ -138,7 +137,7 @@ def strategy_combine(etf_data: pd.DataFrame):
     # 1.56
     # return [dpo, maamt] # 胜率: 0.391304347826087 败率: 0.6086956521739131 盈亏比: 2.1270387285995613
     # 1.26
-    # return [dpo, er] # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 1.909201015635396
+    # return [tii, er] # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 1.909201015635396
     # 1.75
     # return [dpo, tii]  # 胜率: 0.3108108108108108 败率: 0.6891891891891891 盈亏比: 2.2012029435186897
     # 1.8319
@@ -150,7 +149,8 @@ def strategy_combine(etf_data: pd.DataFrame):
     # return [ma]
     # return [ma5]
     # return [tii, dpo, ma20]
-    return [mesa]
+    return [tii, dpo]
+    # return [tii, dpo, macd]
 
 
 # 年化收益率: OrderedDict([(2011, 0.0), (2012, -0.059182187190000124), (2013, 0.21184097379568878), (2014, 0.1917914917428023), (2015, 0.8007249383493), (2016, -0.1507829522782037), (2017, -0.01127350180272646), (2018, -0.10268130902155193), (2019, 0.33992611896744496), (2020, 0.17938762923141116), (2021, 0.1827567250195965)])
@@ -215,6 +215,7 @@ data_value 377521.50475650013
 盈亏比: 3.503674291786867
 
 """
+
 """ma5
 data_value 147724.99977899977
 年化收益率: OrderedDict([(2011, -0.022078309564999787), (2012, 0.039581128027524226), (2013, 0.149754392329017), (2014, 0.007744577452174717), (2015, 0.22502833712991643), (2016, -0.2667936049767201), (2017, -0.09471851133611842), (2018, -0.06779604298305397), (2019, 0.17328234350277105), (2020, 0.3968872102281984), (2021, 0.009497267148574906)])
@@ -225,4 +226,108 @@ data_value 147724.99977899977
 胜率: 0.35119047619047616 败率: 0.6473214285714286
 盈亏比: 2.020116174238302
 
+"""
+"""
+//@version=4
+study("Trend Intensity Index With SignalLine", overlay=false)
+
+//Inputs
+SMALength = input(title = "SmaLength", type = input.integer, defval = 20)
+Src = input(title = "Src", type = input.source, defval = close)
+SignalType = input(title = "Signal Type?", defval = "JURIK", options = ["JURIK", "SMA", "EMA", "RMA", "VWMA"])
+Sma = sma(Src, SMALength)
+SignalLen = input(title = "SignalLen", defval = 20)
+phase = input(title="JurikPhase", type=input.integer, defval=0)
+power = input(title="JurikPower", type=input.integer, defval=2)
+
+//Mathsshiz... calculating the TII...
+Dev = Src - Sma
+
+
+PosDev = 0.00
+NegDev = 0.00
+
+
+if Dev > 0  
+    PosDev := Dev
+
+if Dev < 0
+    NegDev := abs(Dev) 
+
+m = 0
+
+m := (SMALength % 2 == 0) ? SMALength/2 : (SMALength + 1) / 2
+
+Sumpos = sum(PosDev, m)
+Negpos = sum(NegDev, m)
+
+//BOOOM!
+
+TrendIntensity = 100 * (Sumpos) / (Sumpos + Negpos)
+
+
+    
+
+//Signal Moving Averages
+
+SignalMa = 0.00
+
+if SignalType == "JURIK" // many thanks to the wonderful coder, Everget, for this
+    /// Copyright © 2018 Alex Orekhov (everget)
+    /// Copyright © 2017 Jurik Research and Consulting
+
+    phaseRatio = phase < -100 ? 0.5 : phase > 100 ? 2.5 : phase / 100 + 1.5
+    beta = 0.45 * (SignalLen - 1) / (0.45 * (SignalLen - 1) + 2)
+    alpha = pow(beta, power)
+    jma = 0.0
+    e0 = 0.0
+    e0 := (1 - alpha) * TrendIntensity + alpha * nz(e0[1])
+    e1 = 0.0
+    e1 := (TrendIntensity - e0) * (1 - beta) + beta * nz(e1[1])
+    e2 = 0.0
+    e2 := (e0 + phaseRatio * e1 - nz(jma[1])) * pow(1 - alpha, 2) + pow(alpha, 2) * nz(e2[1])
+    jma := e2 + nz(jma[1])
+    SignalMa := jma
+
+if SignalType == "EMA"
+    SignalMa := ema(TrendIntensity, SignalLen)
+
+if SignalType == "SMA"
+    SignalMa := sma(TrendIntensity, SignalLen)
+
+if SignalType == "RMA"
+    SignalMa := rma(TrendIntensity, SignalLen)
+
+if SignalType == "VWMA"
+    SignalMa := vwma(TrendIntensity, SignalLen)
+
+//Lovely job... now it'd be extra nice to have a Histogram plotting the difference between the SignalLine and the TII. When this is flat, market is potentially ranging.
+
+
+Dist = TrendIntensity - SignalMa
+Distance = abs(Dist)
+
+plot(Distance, style = plot.style_columns, color = TrendIntensity >= SignalMa and TrendIntensity > 2? color.green : TrendIntensity <= SignalMa and TrendIntensity < 98 ? color.red : color.green, transp = 0)
+plot(TrendIntensity, style = plot.style_line, linewidth = 3, color = color.aqua)
+plot(SignalMa, style = plot.style_line, linewidth = 2, color = color.maroon)
+
+"""
+
+"""
+dpo macd tii
+夏普: 0.6595065130398121
+最大回撤:24.37，最大回撤周期214
+总收益率:0.74
+交易次数: 49
+胜率: 0.3877551020408163 败率: 0.5918367346938775
+盈亏比: 2.901783274178244
+
+
+tii dpo
+夏普: 0.6188676736173646
+最大回撤:29.24，最大回撤周期287
+总收益率:0.57
+交易次数: 46
+胜率: 0.43478260869565216 败率: 0.5434782608695652
+盈亏比: 2.112487994259678
 """
